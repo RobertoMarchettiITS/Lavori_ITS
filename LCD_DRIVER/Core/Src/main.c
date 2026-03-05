@@ -48,7 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+volatile uint8_t paused = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -251,18 +251,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    lcdSendCmd(0x01);           /* Clear Display                            */
-    HAL_Delay(2);               /* Attendi >1.52 ms dopo il clear           */
+	  if (!paused)
+	  {
+	      lcdSendCmd(0x01);
+	      HAL_Delay(2);
 
-    sprintf(buff, "Char %4d -> ", i);
-    lcdTextWrite(0, 0, buff, 1, 0);
-    lcdSendChar(i);
+	      sprintf(buff, "Char %4d -> ", i);
+	      lcdTextWrite(0, 0, buff, 1, 0);
+	      lcdSendChar(i);
 
-    sprintf(buff, "Char 0x%02X -> %c", i, i);
-    lcdTextWrite(1, 0, buff, 1, 0);
+	      sprintf(buff, "Char 0x%02X -> %c", i, i);
+	      lcdTextWrite(1, 0, buff, 1, 0);
 
-    i += 1;
-    HAL_Delay(750);
+	      i += 1;
+	      HAL_Delay(750);
+	  }
   }
   /* USER CODE END 3 */
 
@@ -463,7 +466,8 @@ static void MX_GPIO_Init(void)
 /* (rising edge = rilascio del pulsante, poiché il tasto è attivo basso)     */
 void UserButtonIntCallBack(void)
 {
-    TOGGLE(USER_LED);
+	paused = !paused;
+	TOGGLE(USER_LED);
 }
 
 /* USER CODE END 4 */
