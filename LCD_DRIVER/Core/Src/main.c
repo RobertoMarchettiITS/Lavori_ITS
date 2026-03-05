@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -138,9 +138,17 @@ static void lcdSendByte(uint8_t byte, uint8_t isData)
     lcdSendNibble(byte & 0x0F);  /* low nibble second */
 }
 
-/* ── Convenience wrappers ───────────────────────────────────────────────── */
-void lcdCommand(uint8_t cmd)  { lcdSendByte(cmd,  0); }
-void lcdData   (uint8_t data) { lcdSendByte(data, 1); }
+/* ── Send a command byte to the LCD (RS=0) ──────────────────────────────── */
+void lcdSendCmd(uint8_t cmd)
+{
+    lcdSendByte(cmd, 0);
+}
+
+/* ── Send a data/character byte to the LCD (RS=1) ──────────────────────── */
+void lcdSendChar(uint8_t data)
+{
+    lcdSendByte(data, 1);
+}
 
 /* ── Full HD44780 4-bit initialization sequence ─────────────────────────── */
 void lcdInit(void)
@@ -166,27 +174,36 @@ void lcdInit(void)
     Delay_uS(150);
 
     /* Configuration commands (now fully in 4-bit mode) */
-    lcdCommand(0x28); /* Function Set: 4-bit, 2 lines, 5x8 font  */
-    lcdCommand(0x08); /* Display OFF                              */
-    lcdCommand(0x01); /* Clear Display                            */
+    lcdSendCmd(0x28); /* Function Set: 4-bit, 2 lines, 5x8 font  */
+    lcdSendCmd(0x08); /* Display OFF                              */
+    lcdSendCmd(0x01); /* Clear Display                            */
     HAL_Delay(2);     /* Clear needs >1.52 ms                     */
-    lcdCommand(0x06); /* Entry Mode: cursor right, no shift       */
-    lcdCommand(0x0C); /* Display ON, cursor OFF, blink OFF        */
+    lcdSendCmd(0x06); /* Entry Mode: cursor right, no shift       */
+    lcdSendCmd(0x0C); /* Display ON, cursor OFF, blink OFF        */
 }
 
-/* ── Position the cursor ────────────────────────────────────────────────── */
-/* row: 0 = first line, 1 = second line  |  col: 0-15                        */
-void lcdSetCursor(uint8_t row, uint8_t col)
+/* ── Position cursor and print a string ─────────────────────────────────── */
+/* row: 0-1  |  col: 0-15                                                    */
+/* clearLine: 1 = pulisce tutta la riga con spazi prima di scrivere          */
+/* scroll: ignorato (non supportato dall'HD44780 in modalità base)           */
+void lcdTextWrite(uint8_t row, uint8_t col, const char *str,
+                  uint8_t clearLine, uint8_t scroll)
 {
+    (void)scroll; /* non usato */
+
     uint8_t address = col + (row == 0 ? 0x00 : 0x40);
-    lcdCommand(0x80 | address);
-}
+    lcdSendCmd(0x80 | address);
 
-/* ── Print a null-terminated string ─────────────────────────────────────── */
-void lcdPrint(const char *str)
-{
+    if (clearLine)
+    {
+        /* Pulisce tutta la riga con spazi, poi riposiziona il cursore */
+        for (uint8_t i = 0; i < 16; i++)
+            lcdSendChar(' ');
+        lcdSendCmd(0x80 | address);
+    }
+
     while (*str)
-        lcdData((uint8_t)*str++);
+        lcdSendChar((uint8_t)*str++);
 }
 
 /* USER CODE END 0 */
@@ -197,44 +214,60 @@ void lcdPrint(const char *str)
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
 
+  /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
 
+  /* Initialize all configured peripherals */
   MX_GPIO_Init();
-
   /* USER CODE BEGIN 2 */
   lcdInit();
-
-  lcdSetCursor(0, 0);
-  lcdPrint("Roberto");
-
-  lcdSetCursor(1, 0);
-  lcdPrint("Andrea");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint8_t i = 0;
+  char buff[16];
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    lcdSendCmd(0x01);           /* Clear Display                            */
+    HAL_Delay(2);               /* Attendi >1.52 ms dopo il clear           */
+
+    sprintf(buff, "Char %4d -> ", i);
+    lcdTextWrite(0, 0, buff, 1, 0);
+    lcdSendChar(i);
+
+    sprintf(buff, "Char 0x%02X -> %c", i, i);
+    lcdTextWrite(1, 0, buff, 1, 0);
+
+    i += 1;
+    HAL_Delay(750);
   }
   /* USER CODE END 3 */
+
+  /* USER CODE BEGIN 4 */
+  /* USER CODE END 4 */
 }
 
 /**
@@ -248,6 +281,9 @@ void SystemClock_Config(void)
 
   __HAL_FLASH_SET_LATENCY(FLASH_LATENCY_1);
 
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -255,11 +291,13 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-                               | RCC_CLOCKTYPE_PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource    = RCC_SYSCLKSOURCE_HSE;
-  RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+  RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
@@ -275,7 +313,11 @@ void SystemClock_Config(void)
   */
 static void MX_GPIO_Init(void)
 {
+  LL_EXTI_InitTypeDef EXTI_InitStruct = {0};
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOC);
@@ -283,62 +325,153 @@ static void MX_GPIO_Init(void)
   LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOA);
   LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOB);
 
-  LL_GPIO_ResetOutputPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
-  LL_GPIO_ResetOutputPin(USER_LED_GPIO_Port,    USER_LED_Pin);
-  LL_GPIO_ResetOutputPin(DISP_DB4_GPIO_Port,    DISP_DB4_Pin);
-  LL_GPIO_ResetOutputPin(DISP_EN_GPIO_Port,     DISP_EN_Pin);
-  LL_GPIO_ResetOutputPin(DISP_DB7_GPIO_Port,    DISP_DB7_Pin);
-  LL_GPIO_ResetOutputPin(DISP_DB5_GPIO_Port,    DISP_DB5_Pin);
-  LL_GPIO_ResetOutputPin(DISP_DB6_GPIO_Port,    DISP_DB6_Pin);
-  LL_GPIO_ResetOutputPin(DISP_RW_GPIO_Port,     DISP_RW_Pin);
-  LL_GPIO_ResetOutputPin(DISP_RS_GPIO_Port,     DISP_RS_Pin);
+  /**/
+  LL_GPIO_ResetOutputPin(USER_LED_GPIO_Port, USER_LED_Pin);
 
-  GPIO_InitStruct.Mode       = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed      = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull       = LL_GPIO_PULL_NO;
+  /**/
+  LL_GPIO_ResetOutputPin(DISP_DB4_GPIO_Port, DISP_DB4_Pin);
 
-  GPIO_InitStruct.Pin = USER_BUTTON_Pin;
-  LL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_ResetOutputPin(DISP_EN_GPIO_Port, DISP_EN_Pin);
 
-  GPIO_InitStruct.Pin = USER_LED_Pin;
-  LL_GPIO_Init(USER_LED_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_ResetOutputPin(DISP_DB7_GPIO_Port, DISP_DB7_Pin);
 
-  GPIO_InitStruct.Pin = DISP_DB4_Pin;
-  LL_GPIO_Init(DISP_DB4_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_ResetOutputPin(DISP_DB5_GPIO_Port, DISP_DB5_Pin);
 
-  GPIO_InitStruct.Pin = DISP_EN_Pin;
-  LL_GPIO_Init(DISP_EN_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_ResetOutputPin(DISP_DB6_GPIO_Port, DISP_DB6_Pin);
 
-  GPIO_InitStruct.Pin = DISP_DB7_Pin;
-  LL_GPIO_Init(DISP_DB7_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_ResetOutputPin(DISP_RW_GPIO_Port, DISP_RW_Pin);
 
-  GPIO_InitStruct.Pin = DISP_DB5_Pin;
-  LL_GPIO_Init(DISP_DB5_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_ResetOutputPin(DISP_RS_GPIO_Port, DISP_RS_Pin);
 
-  GPIO_InitStruct.Pin = DISP_DB6_Pin;
-  LL_GPIO_Init(DISP_DB6_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_13;
+  EXTI_InitStruct.LineCommand = ENABLE;
+  EXTI_InitStruct.Mode = LL_EXTI_MODE_IT;
+  EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_RISING;
+  LL_EXTI_Init(&EXTI_InitStruct);
 
-  GPIO_InitStruct.Pin = DISP_RW_Pin;
-  LL_GPIO_Init(DISP_RW_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_SetPinMode(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin, LL_GPIO_MODE_INPUT);
 
-  GPIO_InitStruct.Pin = DISP_RS_Pin;
-  LL_GPIO_Init(DISP_RS_GPIO_Port, &GPIO_InitStruct);
+  /**/
+  LL_GPIO_SetPinPull(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin, LL_GPIO_PULL_UP);
 
-  GPIO_InitStruct.Mode      = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
+  /**/
+  LL_EXTI_SetEXTISource(LL_EXTI_CONFIG_PORTC, LL_EXTI_CONFIG_LINE13);
 
+  /**/
   GPIO_InitStruct.Pin = VCP_USART2_TX_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
   LL_GPIO_Init(VCP_USART2_TX_GPIO_Port, &GPIO_InitStruct);
 
+  /**/
   GPIO_InitStruct.Pin = VCP_USART2_RX_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
   LL_GPIO_Init(VCP_USART2_RX_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = USER_LED_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(USER_LED_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = DISP_DB4_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(DISP_DB4_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = DISP_EN_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(DISP_EN_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = DISP_DB7_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(DISP_DB7_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = DISP_DB5_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(DISP_DB5_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = DISP_DB6_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(DISP_DB6_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = DISP_RW_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(DISP_RW_GPIO_Port, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = DISP_RS_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(DISP_RS_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  NVIC_SetPriority(EXTI4_15_IRQn, 0);
+  NVIC_EnableIRQ(EXTI4_15_IRQn);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
 
+/* ── Interrupt callback: USER_BUTTON rilasciato → toggle USER_LED ────────── */
+/* Chiamata da EXTI4_15_IRQHandler in stm32c0xx_it.c sul fronte di salita    */
+/* (rising edge = rilascio del pulsante, poiché il tasto è attivo basso)     */
+void UserButtonIntCallBack(void)
+{
+    TOGGLE(USER_LED);
+}
+
 /* USER CODE END 4 */
 
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -346,8 +479,14 @@ void Error_Handler(void)
   while (1) {}
   /* USER CODE END Error_Handler_Debug */
 }
-
 #ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

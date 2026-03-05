@@ -62,12 +62,13 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void UserButtonIntCallBack(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 #define USER_BUTTON_Pin LL_GPIO_PIN_13
 #define USER_BUTTON_GPIO_Port GPIOC
+#define USER_BUTTON_EXTI_IRQn EXTI4_15_IRQn
 #define RCC_OSCX_IN_Pin LL_GPIO_PIN_14
 #define RCC_OSCX_IN_GPIO_Port GPIOC
 #define RCC_OSCX_OUT_Pin LL_GPIO_PIN_15
