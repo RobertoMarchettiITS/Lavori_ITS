@@ -1,0 +1,4 @@
+../Src/main.c:64:5:main	144	static
+../Src/main.c:150:6:SystemClock_Config	64	static
+../Src/main.c:187:13:MX_GPIO_Init	56	static
+../Src/main.c:262:6:Error_Handler	8	static,ignoring_inline_asm
