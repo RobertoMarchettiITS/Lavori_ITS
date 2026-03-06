@@ -71,7 +71,7 @@ int  lcdCheckBusy(void);
 /* If you run at 48 MHz, change the multiplier from 2 to 12.                 */
 void Delay_uS(uint32_t us)
 {
-    volatile uint32_t count = us * 2;
+    volatile uint32_t count = us * 12;
     while (count--);
 }
 
