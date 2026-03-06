@@ -16,6 +16,7 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
@@ -55,20 +56,22 @@ volatile uint8_t paused = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
-
+void Delay_uS(uint32_t us);
+void setLcdDataPort(uint8_t portDato);
+int  lcdCheckBusy(void);
+void lcdSendCmd(uint8_t cmd);
+void lcdSendChar(uint8_t data);
+void lcdInit(void);
+void lcdTextWrite(uint8_t row, uint8_t col, const char *str,
+                  uint8_t clearLine, uint8_t scroll);
+void UserButtonIntCallBack(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* ── Forward declarations ───────────────────────────────────────────────── */
-void Delay_uS(uint32_t us);
-void setLcdDataPort(uint8_t portDato);
-int  lcdCheckBusy(void);
-
 /* ── Microsecond delay ──────────────────────────────────────────────────── */
-/* Calibrated for STM32C031 at 8 MHz HSE.                                    */
-/* If you run at 48 MHz, change the multiplier from 2 to 12.                 */
+/* Calibrated for STM32C031 at 48 MHz HSE.                                   */
 void Delay_uS(uint32_t us)
 {
     volatile uint32_t count = us * 12;
@@ -214,7 +217,6 @@ void lcdTextWrite(uint8_t row, uint8_t col, const char *str,
   */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -237,40 +239,37 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+
   /* USER CODE BEGIN 2 */
   lcdInit();
   /* USER CODE END 2 */
 
-  /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   uint8_t i = 0;
   char buff[16];
 
   while (1)
   {
-    /* USER CODE END WHILE */
+  /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (!paused)
-	  {
-	      lcdSendCmd(0x01);
-	      HAL_Delay(2);
+    if (!paused)
+    {
+        lcdSendCmd(0x01);
+        HAL_Delay(2);
 
-	      sprintf(buff, "Char %4d -> ", i);
-	      lcdTextWrite(0, 0, buff, 1, 0);
-	      lcdSendChar(i);
+        sprintf(buff, "Char %4d -> ", i);
+        lcdTextWrite(0, 0, buff, 1, 0);
+        lcdSendChar(i);
 
-	      sprintf(buff, "Char 0x%02X -> %c", i, i);
-	      lcdTextWrite(1, 0, buff, 1, 0);
+        sprintf(buff, "Char 0x%02X -> %c", i, i);
+        lcdTextWrite(1, 0, buff, 1, 0);
 
-	      i += 1;
-	      HAL_Delay(750);
-	  }
+        i += 1;
+        HAL_Delay(750);
+    }
+    /* USER CODE END 3 */
   }
-  /* USER CODE END 3 */
-
-  /* USER CODE BEGIN 4 */
-  /* USER CODE END 4 */
 }
 
 /**
@@ -466,8 +465,8 @@ static void MX_GPIO_Init(void)
 /* (rising edge = rilascio del pulsante, poiché il tasto è attivo basso)     */
 void UserButtonIntCallBack(void)
 {
-	paused = !paused;
-	TOGGLE(USER_LED);
+    paused = !paused;
+    TOGGLE(USER_LED);
 }
 
 /* USER CODE END 4 */
@@ -483,6 +482,7 @@ void Error_Handler(void)
   while (1) {}
   /* USER CODE END Error_Handler_Debug */
 }
+
 #ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
@@ -494,6 +494,7 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
+
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
