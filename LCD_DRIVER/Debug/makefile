@@ -60,8 +60,13 @@ all: main-build
 main-build: LCD_DRIVER.elf secondary-outputs
 
 # Tool invocations
+<<<<<<< HEAD
 LCD_DRIVER.elf LCD_DRIVER.map: $(OBJS) $(USER_OBJS) C:\Users\Esame\Documents\Personale\RAM\STM32\LCD_DRIVER\STM32C031C6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	arm-none-eabi-gcc -o "LCD_DRIVER.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0plus -T"C:\Users\Esame\Documents\Personale\RAM\STM32\LCD_DRIVER\STM32C031C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LCD_DRIVER.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+=======
+LCD_DRIVER.elf LCD_DRIVER.map: $(OBJS) $(USER_OBJS) C:\Users\Esame\Documents\Personale\Lavori_ITS\STM32\LCD_DRIVER\STM32C031C6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "LCD_DRIVER.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0plus -T"C:\Users\Esame\Documents\Personale\Lavori_ITS\STM32\LCD_DRIVER\STM32C031C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LCD_DRIVER.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+>>>>>>> 3260569 (Aggiustato file per generate code dato che dava qualche problema e aggiunte linee codice per stampare su putty)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

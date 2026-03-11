@@ -8,6 +8,7 @@
 ../Drivers/STM32C0xx_HAL_Driver/Inc/stm32c0xx_ll_gpio.h:945:22:LL_GPIO_TogglePin	1
 ../Drivers/STM32C0xx_HAL_Driver/Inc/stm32c0xx_ll_exti.h:1283:22:LL_EXTI_SetEXTISource	1
 ../Drivers/STM32C0xx_HAL_Driver/Inc/stm32c0xx_ll_bus.h:843:22:LL_IOP_GRP1_EnableClock	1
+<<<<<<< HEAD
 ../Core/Src/main.c:72:6:Delay_uS	2
 ../Core/Src/main.c:79:6:setLcdDataPort	5
 ../Core/Src/main.c:88:5:lcdCheckBusy	3
@@ -22,3 +23,20 @@
 ../Core/Src/main.c:314:13:MX_GPIO_Init	1
 ../Core/Src/main.c:464:6:UserButtonIntCallBack	1
 ../Core/Src/main.c:475:6:Error_Handler	1
+=======
+../Core/Src/main.c:79:6:Delay_uS	2
+../Core/Src/main.c:86:6:setLcdDataPort	5
+../Core/Src/main.c:95:5:lcdCheckBusy	3
+../Core/Src/main.c:122:13:lcdSendNibble	1
+../Core/Src/main.c:133:13:lcdSendByte	2
+../Core/Src/main.c:149:6:lcdSendCmd	1
+../Core/Src/main.c:155:6:lcdSendChar	1
+../Core/Src/main.c:161:6:lcdInit	1
+../Core/Src/main.c:196:6:lcdTextWrite	5
+../Core/Src/main.c:222:5:main	2
+../Core/Src/main.c:290:6:SystemClock_Config	3
+../Core/Src/main.c:327:13:MX_USART2_UART_Init	2
+../Core/Src/main.c:363:13:MX_GPIO_Init	1
+../Core/Src/main.c:495:6:UserButtonIntCallBack	1
+../Core/Src/main.c:507:6:Error_Handler	1
+>>>>>>> 3260569 (Aggiustato file per generate code dato che dava qualche problema e aggiunte linee codice per stampare su putty)

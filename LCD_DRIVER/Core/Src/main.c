@@ -47,6 +47,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+UART_HandleTypeDef huart2;
+
 /* USER CODE BEGIN PV */
 volatile uint8_t paused = 0;
 /* USER CODE END PV */
@@ -54,6 +56,7 @@ volatile uint8_t paused = 0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -237,6 +240,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+<<<<<<< HEAD
+=======
+  MX_USART2_UART_Init();
+>>>>>>> fa8b127 (Aggiustato file per generate code dato che dava qualche problema e aggiunte linee codice per stampare su putty)
   /* USER CODE BEGIN 2 */
   lcdInit();
   /* USER CODE END 2 */
@@ -263,6 +270,7 @@ int main(void)
 	      sprintf(buff, "Char 0x%02X -> %c", i, i);
 	      lcdTextWrite(1, 0, buff, 1, 0);
 
+<<<<<<< HEAD
 	      i += 1;
 	      HAL_Delay(750);
 	  }
@@ -271,6 +279,18 @@ int main(void)
 
   /* USER CODE BEGIN 4 */
   /* USER CODE END 4 */
+=======
+        char uartBuff[40];
+        int len = sprintf(uartBuff, "Char %4d  |  Char 0x%02X -> %c\r\n", i, i, i);
+        HAL_UART_Transmit(&huart2, (uint8_t*)uartBuff, len, HAL_MAX_DELAY);
+
+        i += 1;
+        HAL_Delay(750);
+
+    }
+  }
+  /* USER CODE END 3 */
+>>>>>>> fa8b127 (Aggiustato file per generate code dato che dava qualche problema e aggiunte linee codice per stampare su putty)
 }
 
 /**
@@ -307,6 +327,42 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
 }
 
 /**
@@ -367,24 +423,6 @@ static void MX_GPIO_Init(void)
 
   /**/
   LL_EXTI_SetEXTISource(LL_EXTI_CONFIG_PORTC, LL_EXTI_CONFIG_LINE13);
-
-  /**/
-  GPIO_InitStruct.Pin = VCP_USART2_TX_Pin;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
-  LL_GPIO_Init(VCP_USART2_TX_GPIO_Port, &GPIO_InitStruct);
-
-  /**/
-  GPIO_InitStruct.Pin = VCP_USART2_RX_Pin;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
-  LL_GPIO_Init(VCP_USART2_RX_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = USER_LED_Pin;
