@@ -50,9 +50,9 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
-volatile uint32_t adc_value;
-volatile uint8_t adc_half;
-volatile uint8_t adc_ready;
+volatile uint32_t value;
+volatile uint8_t adc_ready = 0;
+volatile uint8_t adc_half = 0;
 uint16_t adc_buffer[256];
 /* USER CODE END PV */
 
@@ -60,8 +60,8 @@ uint16_t adc_buffer[256];
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -73,7 +73,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc){
 	adc_half = 1;
 }
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc){
-	//adc_value = HAL_ADC_GetValue(hadc);
+	/*value = HAL_ADC_GetValue(hadc);*/
 	adc_ready = 1;
 }
 /* USER CODE END 0 */
@@ -108,60 +108,50 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART2_UART_Init();
   MX_ADC1_Init();
+  MX_USART2_UART_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adc_buffer, 256);
-
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 256);
   HAL_TIM_Base_Start(&htim3);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-  /*uint32_t adcReadValue;*/
-  /*char txBuffer[20];
-  HAL_ADC_Start_IT(&hadc1);*/
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adc_buffer, 256);
-
   while (1)
   {
-	  if(adc_half == 1){
+	  if(adc_half==1){
 		  adc_half = 0;
-	  	  HAL_UART_Transmit_DMA(&huart2, (uint8_t*) &adc_buffer[0], 256);
-	  	  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_Pin, SET);
+		  HAL_UART_Transmit_DMA(&huart2, (uint8_t*)&adc_buffer[0], 256);
+		  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_Pin, SET);
+	  }
 
+	  if(adc_ready==1){
+		  adc_ready = 0;
+		  HAL_UART_Transmit_DMA(&huart2, (uint8_t*)&adc_buffer[128], 256);
+		  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_Pin, RESET);
 	  }
-	  if(adc_ready == 1){
-	 		  adc_ready = 0;
-	 	  	  HAL_UART_Transmit_DMA(&huart2, (uint8_t*) &adc_buffer[128], 256);
-	 	  	  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_Pin, RESET);
-	  }
-	 /*
+	  /*HAL_GPIO_TogglePin(DEBUG_GPIO_Port, DEBUG_Pin);
 	  HAL_ADC_Start(&hadc1);
 	  HAL_ADC_PollForConversion(&hadc1, 10);
-	  adcReadValue = HAL_ADC_GetValue(&hadc1);
-
+	  value = HAL_ADC_GetValue(&hadc1);
+	  HAL_GPIO_TogglePin(DEBUG_GPIO_Port, DEBUG_Pin);
 	  HAL_ADC_Stop(&hadc1);
 
-
-	  HAL_Delay(adcReadValue);
+	  HAL_Delay(value);
 	  HAL_GPIO_TogglePin(USER_LED_GPIO_Port, USER_LED_Pin);
-	  HAL_Delay(adcReadValue);
-	  HAL_GPIO_TogglePin(USER_LED_GPIO_Port, USER_LED_Pin);
-	 */
-	 /*
-	  HAL_ADC_Start_IT(&hadc1);
+	  HAL_Delay(value);
+	  HAL_GPIO_TogglePin(USER_LED_GPIO_Port, USER_LED_Pin);*/
 
-	  if (adc_ready==1){
-		  adc_ready=0;
-		  sprintf(txBuffer, "%05ld\r\n", adc_value);
-		  HAL_UART_Transmit(&huart2, (uint8_t*)txBuffer, sizeof(txBuffer), 100);
+	  /*if(adc_ready==1){
 		  HAL_ADC_Start_IT(&hadc1);
+		  adc_ready=0;
+		  sprintf(txBuffer, "%05ld\n\r", value);
+		  HAL_UART_Transmit(&huart2, (uint8_t*)txBuffer, sizeof(txBuffer), 100);
 	  }
-	*/
+
+	  HAL_GPIO_TogglePin(USER_LED_GPIO_Port, USER_LED_Pin);*/
 
     /* USER CODE END WHILE */
 
@@ -234,8 +224,9 @@ static void MX_ADC1_Init(void)
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.LowPowerAutoPowerOff = DISABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T3_TRGO;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
   hadc1.Init.DMAContinuousRequests = ENABLE;
@@ -337,7 +328,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 921600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
